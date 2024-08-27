@@ -53,77 +53,113 @@ def plot_p_values(test_results):
     
     st.plotly_chart(fig)
 
-# Streamlit Web App
+# Function to display assumptions
+def display_assumptions():
+    st.title("Statistical Test Assumptions")
+
+    st.write("""
+    | **Test Type**                | **Assumptions**                                                                                                      |
+    |------------------------------|---------------------------------------------------------------------------------------------------------------------|
+    | **Chi-Square Test**          | 1. **Independence:** Observations should be independent of each other.                                               |
+    |                              | 2. **Sample Size:** Expected frequency in each cell of the contingency table should be at least 5 (some say 10).      |
+    |                              | 3. **Categorical Data:** Both variables should be categorical.                                                        |
+    |                              | 4. **Sufficient Sample Size:** Overall sample size should be large enough to ensure valid results.                    |
+    | **T-Test**                   | 1. **Independence:** Observations in each group should be independent of each other.                                   |
+    |                              | 2. **Normality:** Data should be approximately normally distributed (especially important for small sample sizes).     |
+    |                              | 3. **Homogeneity of Variances:** Variances in the two groups should be approximately equal (for independent t-test).   |
+    |                              | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
+    | **ANOVA (Analysis of Variance)** | 1. **Independence:** Observations should be independent of each other.                                                |
+    |                              | 2. **Normality:** Data in each group should be approximately normally distributed (important for small sample sizes). |
+    |                              | 3. **Homogeneity of Variances:** Variances among groups should be roughly equal.                                      |
+    |                              | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
+    | **Z-Test for Proportions**   | 1. **Independence:** Observations should be independent.                                                               |
+    |                              | 2. **Sample Size:** Both the number of successes and failures should be at least 5 (some guidelines suggest 10).       |
+    |                              | 3. **Binomial Distribution:** The data should follow a binomial distribution.                                         |
+    |                              | 4. **Normal Approximation:** For large sample sizes, the binomial distribution can be approximated by the normal distribution. |
+    | **Z-Test for Means**         | 1. **Independence:** Observations should be independent.                                                               |
+    |                              | 2. **Normality:** Data should be approximately normally distributed (important for small sample sizes).                |
+    |                              | 3. **Known Variance:** Population variance should be known.                                                             |
+    |                              | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
+    """)
+
+# Main Streamlit app function
 def main():
-    st.title("Statistical Hypothesis Testing Web App")
-    
-    st.sidebar.header("Step 1: Hypothesis Input")
-    null_hypothesis = st.sidebar.text_input("Null Hypothesis (H0):")
-    alt_hypothesis = st.sidebar.text_input("Alternative Hypothesis (H1):")
+    st.sidebar.title("Navigation")
+    page = st.sidebar.radio("Select a Page", ["Home", "Assumptions"])
 
-    st.sidebar.header("Step 2: Dataset Upload")
-    uploaded_file = st.sidebar.file_uploader("Upload your dataset", type=["csv", "xlsx"])
-    
-    if uploaded_file:
-        df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
-        st.write("Dataset Preview:")
-        st.dataframe(df.head())
+    if page == "Home":
+        st.title("Statistical Hypothesis Testing Web App")
         
-        st.sidebar.header("Step 3: Select Test Set")
-        test_set = st.sidebar.selectbox("Choose Test Set", ['Basic Tests', 'Advanced Tests'])
+        st.sidebar.header("Step 1: Hypothesis Input")
+        null_hypothesis = st.sidebar.text_input("Null Hypothesis (H0):")
+        alt_hypothesis = st.sidebar.text_input("Alternative Hypothesis (H1):")
 
-        st.sidebar.header("Step 4: Select Statistical Test(s)")
-        if test_set == 'Basic Tests':
-            test_types = ['Chi-Square Test', 'T-Test']
-        else:  # Advanced Tests
-            test_types = ['Chi-Square Test', 'Z-Test for Proportions', 'T-Test', 'ANOVA']
+        st.sidebar.header("Step 2: Dataset Upload")
+        uploaded_file = st.sidebar.file_uploader("Upload your dataset", type=["csv", "xlsx"])
         
-        selected_tests = st.sidebar.multiselect("Select Tests", test_types)
-        
-        st.sidebar.header("Step 5: Specify Test Parameters")
-        test_results = {}
-        
-        for test_type in selected_tests:
-            if test_type == 'Chi-Square Test':
-                col1 = st.sidebar.selectbox("Select Categorical Column 1", df.columns)
-                col2 = st.sidebar.selectbox("Select Categorical Column 2", df.columns)
-                params = {'col1': col1, 'col2': col2}
+        if uploaded_file:
+            df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
+            st.write("Dataset Preview:")
+            st.dataframe(df.head())
             
-            elif test_type == 'Z-Test for Proportions':
-                col = st.sidebar.selectbox("Select Column for Proportion Test", df.columns)
-                value = st.sidebar.text_input("Category to Test Proportion Against")
-                p0 = st.sidebar.number_input("Hypothesized Proportion (e.g., 0.2 for 20%)", min_value=0.0, max_value=1.0)
-                params = {'col': col, 'value': value, 'p0': p0}
+            st.sidebar.header("Step 3: Select Test Set")
+            test_set = st.sidebar.selectbox("Choose Test Set", ['Basic Tests', 'Advanced Tests'])
+
+            st.sidebar.header("Step 4: Select Statistical Test(s)")
+            if test_set == 'Basic Tests':
+                test_types = ['Chi-Square Test', 'T-Test']
+            else:  # Advanced Tests
+                test_types = ['Chi-Square Test', 'Z-Test for Proportions', 'T-Test', 'ANOVA']
             
-            elif test_type == 'T-Test':
-                group_col = st.sidebar.selectbox("Select Group Column", df.columns)
-                group1 = st.sidebar.text_input("First Group")
-                group2 = st.sidebar.text_input("Second Group")
-                value_col = st.sidebar.selectbox("Select Value Column for T-Test", df.columns)
-                params = {'group_col': group_col, 'group1': group1, 'group2': group2, 'value_col': value_col}
+            selected_tests = st.sidebar.multiselect("Select Tests", test_types)
             
-            elif test_type == 'ANOVA':
-                group_col = st.sidebar.selectbox("Select Group Column for ANOVA", df.columns)
-                value_col = st.sidebar.selectbox("Select Value Column for ANOVA", df.columns)
-                params = {'group_col': group_col, 'value_col': value_col}
+            st.sidebar.header("Step 5: Specify Test Parameters")
+            test_results = {}
             
-            if st.sidebar.button(f"Run {test_type}"):
-                test_stat, p_value = perform_statistical_test(test_type, df, **params)
-                st.write(f"**{test_type} Results:**")
-                st.write(f"Test Statistic: {test_stat:.4f}")
-                st.write(f"P-Value: {p_value:.4f}")
+            for test_type in selected_tests:
+                if test_type == 'Chi-Square Test':
+                    col1 = st.sidebar.selectbox("Select Categorical Column 1", df.columns)
+                    col2 = st.sidebar.selectbox("Select Categorical Column 2", df.columns)
+                    params = {'col1': col1, 'col2': col2}
                 
-                if p_value < 0.05:
-                    st.write(f"**Reject the Null Hypothesis**: {null_hypothesis}")
-                else:
-                    st.write(f"**Fail to Reject the Null Hypothesis**: {null_hypothesis}")
+                elif test_type == 'Z-Test for Proportions':
+                    col = st.sidebar.selectbox("Select Column for Proportion Test", df.columns)
+                    value = st.sidebar.text_input("Category to Test Proportion Against")
+                    p0 = st.sidebar.number_input("Hypothesized Proportion (e.g., 0.2 for 20%)", min_value=0.0, max_value=1.0)
+                    params = {'col': col, 'value': value, 'p0': p0}
+                
+                elif test_type == 'T-Test':
+                    group_col = st.sidebar.selectbox("Select Group Column", df.columns)
+                    group1 = st.sidebar.text_input("First Group")
+                    group2 = st.sidebar.text_input("Second Group")
+                    value_col = st.sidebar.selectbox("Select Value Column for T-Test", df.columns)
+                    params = {'group_col': group_col, 'group1': group1, 'group2': group2, 'value_col': value_col}
+                
+                elif test_type == 'ANOVA':
+                    group_col = st.sidebar.selectbox("Select Group Column for ANOVA", df.columns)
+                    value_col = st.sidebar.selectbox("Select Value Column for ANOVA", df.columns)
+                    params = {'group_col': group_col, 'value_col': value_col}
+                
+                if st.sidebar.button(f"Run {test_type}"):
+                    test_stat, p_value = perform_statistical_test(test_type, df, **params)
+                    st.write(f"**{test_type} Results:**")
+                    st.write(f"Test Statistic: {test_stat:.4f}")
+                    st.write(f"P-Value: {p_value:.4f}")
+                    
+                    if p_value < 0.05:
+                        st.write(f"**Reject the Null Hypothesis**: {null_hypothesis}")
+                    else:
+                        st.write(f"**Fail to Reject the Null Hypothesis**: {null_hypothesis}")
 
-                # Store the p-value for plotting
-                test_results[test_type] = p_value
+                    # Store the p-value for plotting
+                    test_results[test_type] = p_value
 
-        # Plot p-values
-        if test_results:
-            plot_p_values(test_results)
+            # Plot p-values
+            if test_results:
+                plot_p_values(test_results)
+
+    elif page == "Assumptions":
+        display_assumptions()
 
 if __name__ == '__main__':
     main()
