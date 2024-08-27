@@ -47,8 +47,6 @@ This web application provides an interactive platform for performing various sta
 - **Binomial Distribution:** Data should follow a binomial distribution.
 - **Normal Approximation:** For large sample sizes, the binomial distribution can be approximated by the normal distribution.
 
-
-
 ## Installation
 
 1. **Clone the Repository**
@@ -90,10 +88,11 @@ This web application provides an interactive platform for performing various sta
 8. **Understand Assumptions:**
    Switch to the "Assumptions" page to view the assumptions for each test.
 
-## License
+## Deployment
+The web app is also deployed and accessible online. You can access the live application at:
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+[Statistical Hypothesis Testing Web App](https://statsmodel1.streamlit.app)
 
 ## Contact
 
-For any questions or feedback, please contact [your_email@example.com](mailto:your_email@example.com).
+For any questions or feedback, please contact [sohamnsharma@gmail.com](mailto:sohamnsharma@gmail.com).
