@@ -1,10 +1,12 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-from scipy.stats import chi2_contingency, ttest_ind, f_oneway, zscore
+from scipy.stats import chi2_contingency, ttest_ind, f_oneway, norm
 from statsmodels.stats.proportion import proportions_ztest
+from statsmodels.stats.anova import AnovaRM
 import plotly.graph_objects as go
 
+# Function to perform the chosen statistical test
 def perform_statistical_test(test_type, df, **kwargs):
     if test_type == 'Chi-Square Test of Independence':
         contingency_table = pd.crosstab(df[kwargs['col1']], df[kwargs['col2']])
@@ -34,7 +36,7 @@ def perform_statistical_test(test_type, df, **kwargs):
         sample_mean = df[kwargs['col']].mean()
         sample_size = len(df)
         z_stat = (sample_mean - mean) / (std_dev / np.sqrt(sample_size))
-        p_value = 1 - st.norm.cdf(abs(z_stat))
+        p_value = 1 - norm.cdf(abs(z_stat))
         return z_stat, p_value
     
     elif test_type == 'Two-Sample Z-Test':
@@ -46,7 +48,7 @@ def perform_statistical_test(test_type, df, **kwargs):
         n2 = kwargs['n2']
         pooled_std = np.sqrt((std_dev1**2 / n1) + (std_dev2**2 / n2))
         z_stat = (mean1 - mean2) / pooled_std
-        p_value = 1 - st.norm.cdf(abs(z_stat))
+        p_value = 1 - norm.cdf(abs(z_stat))
         return z_stat, p_value
     
     elif test_type == 'T-Test':
@@ -61,12 +63,15 @@ def perform_statistical_test(test_type, df, **kwargs):
         return f_stat, p_value
     
     elif test_type == 'ANOVA (Two-Way)':
-        st.warning("Two-Way ANOVA functionality is not yet implemented.")
-        return None, None
+        # Assuming 'df' has columns 'dependent_var', 'factor1', and 'factor2'
+        model = AnovaRM(df, 'dependent_var', 'subject_id', within=['factor1', 'factor2'])
+        res = model.fit()
+        return res.anova_table['F'][0], res.anova_table['Pr > F'][0]
     
     else:
         raise ValueError("Invalid test_type provided.")
 
+# Function to plot p-values
 def plot_p_values(test_results):
     fig = go.Figure()
     for test_type, p_value in test_results.items():
@@ -87,49 +92,52 @@ def plot_p_values(test_results):
     
     st.plotly_chart(fig)
 
+# Function to display assumptions
 def display_assumptions():
     st.title("Statistical Test Assumptions")
 
     st.write("""
-    | **Test Type**                        | **Assumptions**                                                                                                      |
-    |--------------------------------------|---------------------------------------------------------------------------------------------------------------------|
-    | **Chi-Square Test of Independence**  | 1. **Independence:** Observations should be independent of each other.                                               |
-    |                                      | 2. **Sample Size:** Expected frequency in each cell of the contingency table should be at least 5 (some say 10).      |
-    |                                      | 3. **Categorical Data:** Both variables should be categorical.                                                        |
-    |                                      | 4. **Sufficient Sample Size:** Overall sample size should be large enough to ensure valid results.                    |
-    | **Chi-Square Test of Homogeneity**   | 1. **Independence:** Observations should be independent.                                                               |
-    |                                      | 2. **Sample Size:** Expected frequency in each cell of the contingency table should be at least 5 (some say 10).      |
-    |                                      | 3. **Categorical Data:** Data should be categorized into distinct groups.                                             |
+    | **Test Type**                | **Assumptions**                                                                                                      |
+    |------------------------------|---------------------------------------------------------------------------------------------------------------------|
+    | **Chi-Square Test of Independence** | 1. **Independence:** Observations should be independent of each other.                                               |
+    |                              | 2. **Sample Size:** Expected frequency in each cell of the contingency table should be at least 5 (some say 10).      |
+    |                              | 3. **Categorical Data:** Both variables should be categorical.                                                        |
+    |                              | 4. **Sufficient Sample Size:** Overall sample size should be large enough to ensure valid results.                    |
+    | **Chi-Square Test of Homogeneity** | 1. **Independence:** Observations should be independent.                                                               |
+    |                              | 2. **Sample Size:** Expected frequency in each cell of the contingency table should be at least 5 (some say 10).      |
+    |                              | 3. **Categorical Data:** Both samples should be categorical and drawn from different populations.                    |
+    |                              | 4. **Sufficient Sample Size:** Overall sample size should be large enough to ensure valid results.                    |
     | **Chi-Square Test for Goodness of Fit** | 1. **Independence:** Observations should be independent.                                                               |
-    |                                      | 2. **Sample Size:** The number of expected counts should be at least 5 (some say 10).                                |
-    |                                      | 3. **Categorical Data:** Observed data should be categorical.                                                          |
-    |                                      | 4. **Binomial Distribution:** The data should be distributed according to a binomial distribution.                    |
-    | **T-Test**                          | 1. **Independence:** Observations in each group should be independent of each other.                                   |
-    |                                      | 2. **Normality:** Data should be approximately normally distributed (especially important for small sample sizes).     |
-    |                                      | 3. **Homogeneity of Variances:** Variances in the two groups should be approximately equal (for independent t-test).   |
-    |                                      | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
-    | **ANOVA (One-Way)**                 | 1. **Independence:** Observations should be independent of each other.                                                |
-    |                                      | 2. **Normality:** Data in each group should be approximately normally distributed (important for small sample sizes). |
-    |                                      | 3. **Homogeneity of Variances:** Variances among groups should be roughly equal.                                      |
-    |                                      | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
-    | **ANOVA (Two-Way)**                 | 1. **Independence:** Observations should be independent.                                                               |
-    |                                      | 2. **Normality:** Data should be approximately normally distributed.                                                   |
-    |                                      | 3. **Homogeneity of Variances:** Variances among groups should be roughly equal.                                      |
-    |                                      | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
-    | **Z-Test for Proportions**           | 1. **Independence:** Observations should be independent.                                                               |
-    |                                      | 2. **Sample Size:** Both the number of successes and failures should be at least 5 (some guidelines suggest 10).       |
-    |                                      | 3. **Binomial Distribution:** The data should follow a binomial distribution.                                         |
-    |                                      | 4. **Normal Approximation:** For large sample sizes, the binomial distribution can be approximated by the normal distribution. |
-    | **One-Sample Z-Test**                | 1. **Independence:** Observations should be independent.                                                               |
-    |                                      | 2. **Normality:** Data should be approximately normally distributed (important for small sample sizes).                |
-    |                                      | 3. **Known Variance:** Population variance should be known.                                                             |
-    |                                      | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
-    | **Two-Sample Z-Test**                | 1. **Independence:** Observations should be independent.                                                               |
-    |                                      | 2. **Normality:** Data should be approximately normally distributed (important for small sample sizes).                |
-    |                                      | 3. **Known Variances:** Variances of both populations should be known.                                                |
-    |                                      | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
+    |                              | 2. **Sample Size:** Expected frequency for each category should be at least 5 (some say 10).                         |
+    |                              | 3. **Categorical Data:** The data should be categorical.                                                                |
+    |                              | 4. **Sufficient Sample Size:** Overall sample size should be large enough to ensure valid results.                    |
+    | **T-Test**                   | 1. **Independence:** Observations in each group should be independent of each other.                                   |
+    |                              | 2. **Normality:** Data should be approximately normally distributed (especially important for small sample sizes).     |
+    |                              | 3. **Homogeneity of Variances:** Variances in the two groups should be approximately equal (for independent t-test).   |
+    |                              | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
+    | **ANOVA (One-Way)**          | 1. **Independence:** Observations should be independent of each other.                                                |
+    |                              | 2. **Normality:** Data in each group should be approximately normally distributed (important for small sample sizes). |
+    |                              | 3. **Homogeneity of Variances:** Variances among groups should be roughly equal.                                      |
+    |                              | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
+    | **ANOVA (Two-Way)**          | 1. **Independence:** Observations should be independent of each other.                                                |
+    |                              | 2. **Normality:** Data in each group should be approximately normally distributed (important for small sample sizes). |
+    |                              | 3. **Homogeneity of Variances:** Variances among groups should be roughly equal.                                      |
+    |                              | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
+    | **Z-Test for Proportions**   | 1. **Independence:** Observations should be independent.                                                               |
+    |                              | 2. **Sample Size:** Both the number of successes and failures should be at least 5 (some guidelines suggest 10).       |
+    |                              | 3. **Binomial Distribution:** The data should follow a binomial distribution.                                         |
+    |                              | 4. **Normal Approximation:** For large sample sizes, the binomial distribution can be approximated by the normal distribution. |
+    | **One-Sample Z-Test**        | 1. **Independence:** Observations should be independent.                                                               |
+    |                              | 2. **Normality:** Data should be approximately normally distributed (important for small sample sizes).                |
+    |                              | 3. **Known Variance:** Population variance should be known.                                                             |
+    |                              | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
+    | **Two-Sample Z-Test**        | 1. **Independence:** Observations should be independent.                                                               |
+    |                              | 2. **Normality:** Data should be approximately normally distributed (important for small sample sizes).                |
+    |                              | 3. **Known Variance:** Population variances should be known for both groups.                                           |
+    |                              | 4. **Scale of Measurement:** Data should be measured on a continuous scale.                                           |
     """)
 
+# Main Streamlit app function
 def main():
     st.sidebar.title("Navigation")
     page = st.sidebar.radio("Select a Page", ["Home", "Assumptions"])
@@ -154,22 +162,10 @@ def main():
 
             st.sidebar.header("Step 4: Select Statistical Test(s)")
             if test_set == 'Basic Tests':
-                test_types = [
-                    'Chi-Square Test of Independence',
-                    'T-Test',
-                    'One-Sample Z-Test'
-                ]
+                test_types = ['Chi-Square Test of Independence', 'T-Test']
             else:  # Advanced Tests
-                test_types = [
-                    'Chi-Square Test of Independence',
-                    'Chi-Square Test of Homogeneity',
-                    'Chi-Square Test for Goodness of Fit',
-                    'Z-Test for Proportions',
-                    'T-Test',
-                    'ANOVA (One-Way)',
-                    'One-Sample Z-Test',
-                    'Two-Sample Z-Test'
-                ]
+                test_types = ['Chi-Square Test of Independence', 'Chi-Square Test of Homogeneity', 'Chi-Square Test for Goodness of Fit', 
+                              'Z-Test for Proportions', 'One-Sample Z-Test', 'Two-Sample Z-Test', 'T-Test', 'ANOVA (One-Way)', 'ANOVA (Two-Way)']
             
             selected_tests = st.sidebar.multiselect("Select Tests", test_types)
             
@@ -188,8 +184,8 @@ def main():
                     params = {'col1': col1, 'col2': col2}
                 
                 elif test_type == 'Chi-Square Test for Goodness of Fit':
-                    col = st.sidebar.selectbox("Select Column for Goodness of Fit Test", df.columns)
-                    expected_count = st.sidebar.number_input("Expected Count", min_value=0, value=1)
+                    col = st.sidebar.selectbox("Select Column", df.columns)
+                    expected_count = st.sidebar.number_input("Expected Count per Category", min_value=1)
                     params = {'col': col, 'expected_count': expected_count}
                 
                 elif test_type == 'Z-Test for Proportions':
@@ -199,18 +195,19 @@ def main():
                     params = {'col': col, 'value': value, 'p0': p0}
                 
                 elif test_type == 'One-Sample Z-Test':
+                    col = st.sidebar.selectbox("Select Column", df.columns)
                     mean = st.sidebar.number_input("Population Mean", value=0.0)
                     std_dev = st.sidebar.number_input("Population Standard Deviation", value=1.0)
-                    col = st.sidebar.selectbox("Select Column for Z-Test", df.columns)
-                    params = {'mean': mean, 'std_dev': std_dev, 'col': col}
+                    params = {'col': col, 'mean': mean, 'std_dev': std_dev}
                 
                 elif test_type == 'Two-Sample Z-Test':
-                    mean1 = st.sidebar.number_input("Mean of First Sample", value=0.0)
-                    mean2 = st.sidebar.number_input("Mean of Second Sample", value=0.0)
-                    std_dev1 = st.sidebar.number_input("Standard Deviation of First Sample", value=1.0)
-                    std_dev2 = st.sidebar.number_input("Standard Deviation of Second Sample", value=1.0)
-                    n1 = st.sidebar.number_input("Sample Size of First Sample", value=30)
-                    n2 = st.sidebar.number_input("Sample Size of Second Sample", value=30)
+                    col = st.sidebar.selectbox("Select Column", df.columns)
+                    mean1 = st.sidebar.number_input("Mean of Group 1", value=0.0)
+                    mean2 = st.sidebar.number_input("Mean of Group 2", value=0.0)
+                    std_dev1 = st.sidebar.number_input("Standard Deviation of Group 1", value=1.0)
+                    std_dev2 = st.sidebar.number_input("Standard Deviation of Group 2", value=1.0)
+                    n1 = st.sidebar.number_input("Sample Size of Group 1", value=30)
+                    n2 = st.sidebar.number_input("Sample Size of Group 2", value=30)
                     params = {'mean1': mean1, 'mean2': mean2, 'std_dev1': std_dev1, 'std_dev2': std_dev2, 'n1': n1, 'n2': n2}
                 
                 elif test_type == 'T-Test':
@@ -225,6 +222,12 @@ def main():
                     value_col = st.sidebar.selectbox("Select Value Column for ANOVA", df.columns)
                     params = {'group_col': group_col, 'value_col': value_col}
                 
+                elif test_type == 'ANOVA (Two-Way)':
+                    dependent_var = st.sidebar.selectbox("Select Dependent Variable", df.columns)
+                    factor1 = st.sidebar.selectbox("Select Factor 1", df.columns)
+                    factor2 = st.sidebar.selectbox("Select Factor 2", df.columns)
+                    params = {'dependent_var': dependent_var, 'factor1': factor1, 'factor2': factor2, 'subject_id': 'subject_id'}
+                
                 if st.sidebar.button(f"Run {test_type}"):
                     test_stat, p_value = perform_statistical_test(test_type, df, **params)
                     st.write(f"**{test_type} Results:**")
@@ -236,8 +239,10 @@ def main():
                     else:
                         st.write(f"**Fail to Reject the Null Hypothesis**: {null_hypothesis}")
 
+                    # Store the p-value for plotting
                     test_results[test_type] = p_value
-           
+
+            # Plot p-values
             if test_results:
                 plot_p_values(test_results)
 
