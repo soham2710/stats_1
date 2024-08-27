@@ -51,12 +51,18 @@ This web application provides an interactive platform for performing various sta
 
 ## Installation
 
-1. **Navigate to the Project Directory:**
+1. **Clone the Repository**
+   ```bash
+   git clone <repository_url>
+2. **Navigate to the Project Directory:**
    ```bash
    cd <project_directory>
-
-
-
+3. **Install Dependencies: Ensure you have Python installed. Then, install the required packages:**
+   ```bash
+   pip install -r requirements.txt
+4. **Run the Streamlit App:**
+   ```bash
+   streamlit run app.py  
 
 ## Usage
 
